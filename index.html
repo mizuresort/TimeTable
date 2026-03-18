@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>じかんわり ✦ 時間割メーカー</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ed;
+    --surface: #fdfbf8;
+    --surface2: #ede9e2;
+    --border: rgba(0,0,0,0.08);
+    --accent1: #8b5cf6;
+    --accent2: #ec4899;
+    --accent3: #3b82f6;
+    --accent4: #10b981;
+    --text: #2d2a26;
+    --text-muted: #9c9488;
+    --glow1: rgba(139,92,246,0.15);
+    --glow2: rgba(236,72,153,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* animated bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, rgba(139,92,246,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(59,130,246,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 50% 50%, rgba(236,72,153,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .header-eyebrow {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent1);
+    margin-bottom: 12px;
+    opacity: 0.9;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-style: italic;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+
+  .header-sub {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 300;
+  }
+
+  /* Term tabs */
+  .tab-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 24px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 1px;
+  }
+
+  .tab-btn:hover {
+    border-color: var(--accent1);
+    color: var(--accent1);
+  }
+
+  .tab-btn.active {
+    background: linear-gradient(135deg, rgba(192,132,252,0.2), rgba(244,114,182,0.15));
+    border-color: var(--accent1);
+    color: var(--accent1);
+    box-shadow: 0 0 20px rgba(192,132,252,0.2);
+  }
+
+  /* Term panel */
+  .term-panel {
+    display: none;
+    animation: fadeUp 0.35s ease forwards;
+  }
+  .term-panel.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Timetable */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    border: 1px solid var(--border);
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  /* Header row: 月火水木金 */
+  thead th {
+    padding: 16px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    background: var(--surface2);
+  }
+
+  thead th:first-child {
+    background: transparent;
+    width: 52px;
+  }
+
+  thead th:nth-child(2) { color: var(--accent1); }
+  thead th:nth-child(3) { color: var(--accent2); }
+  thead th:nth-child(4) { color: var(--accent3); }
+  thead th:nth-child(5) { color: var(--accent4); }
+  thead th:nth-child(6) { color: #fb923c; }
+
+  /* Period col */
+  .period-cell {
+    width: 52px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 0 8px;
+  }
+
+  /* Subject cell */
+  .subject-cell {
+    height: 88px;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    position: relative;
+  }
+
+  .subject-cell:hover {
+    background: rgba(255,255,255,0.03);
+  }
+
+  .cell-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .cell-inner.empty .add-icon {
+    opacity: 0;
+    font-size: 18px;
+    color: var(--text-muted);
+    transition: opacity 0.2s;
+  }
+  .subject-cell:hover .add-icon { opacity: 1 !important; }
+
+  .subject-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--text);
+  }
+
+  .subject-badge {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 50px;
+    margin-top: 2px;
+    font-weight: 600;
+  }
+
+  /* filled cell color variants by day */
+  .filled-0 { background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(139,92,246,0.04)); border-color: rgba(139,92,246,0.25) !important; }
+  .filled-1 { background: linear-gradient(135deg, rgba(236,72,153,0.12), rgba(236,72,153,0.04)); border-color: rgba(236,72,153,0.25) !important; }
+  .filled-2 { background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(59,130,246,0.04)); border-color: rgba(59,130,246,0.25) !important; }
+  .filled-3 { background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04)); border-color: rgba(16,185,129,0.25) !important; }
+  .filled-4 { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04)); border-color: rgba(245,158,11,0.25) !important; }
+
+  .badge-0 { background: rgba(139,92,246,0.15); color: #7c3aed; }
+  .badge-1 { background: rgba(236,72,153,0.15); color: #db2777; }
+  .badge-2 { background: rgba(59,130,246,0.15); color: #2563eb; }
+  .badge-3 { background: rgba(16,185,129,0.15); color: #059669; }
+  .badge-4 { background: rgba(245,158,11,0.15); color: #d97706; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 8px 18px;
+    font-size: 13px;
+  }
+
+  .stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .stat-label { color: var(--text-muted); }
+  .stat-val { font-weight: 700; color: var(--text); }
+
+  /* Modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(200,195,188,0.6);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 24px;
+    padding: 36px;
+    width: 90%;
+    max-width: 380px;
+    box-shadow: 0 0 60px rgba(139,92,246,0.1), 0 40px 80px rgba(0,0,0,0.12);
+    animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    position: relative;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.88) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent1);
+    margin-bottom: 8px;
+  }
+
+  .modal h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 28px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .form-group input, .form-group select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--accent1);
+    box-shadow: 0 0 0 3px rgba(192,132,252,0.15);
+  }
+
+  .form-group select option { background: var(--surface2); }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 12px;
+    padding: 12px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .btn-save {
+    flex: 2;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    border: none;
+    color: white;
+    border-radius: 12px;
+    padding: 12px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(192,132,252,0.4);
+    letter-spacing: 1px;
+  }
+  .btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(192,132,252,0.55);
+  }
+
+  .btn-delete {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .btn-delete:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: linear-gradient(135deg, rgba(52,211,153,0.9), rgba(96,165,250,0.9));
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 12px 28px;
+    border-radius: 50px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    z-index: 200;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s;
+    opacity: 0;
+    letter-spacing: 1px;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-eyebrow">✦ University Schedule Planner ✦</div>
+    <h1>My Timetable</h1>
+    <p class="header-sub">セルをクリックして科目を登録しよう</p>
+  </header>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTerm(0)">１ターム</button>
+    <button class="tab-btn" onclick="switchTerm(1)">２ターム</button>
+    <button class="tab-btn" onclick="switchTerm(2)">３ターム</button>
+    <button class="tab-btn" onclick="switchTerm(3)">４ターム</button>
+  </div>
+
+  <div id="terms-container"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <button class="btn-delete" id="btn-delete" title="削除">🗑</button>
+    <div class="modal-label" id="modal-label">科目を登録</div>
+    <h2 id="modal-title">—</h2>
+    <div class="form-group">
+      <label>科目名</label>
+      <input type="text" id="input-subject" placeholder="例：線形代数、英語コミュニケーション…" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label>メモ（任意）</label>
+      <input type="text" id="input-memo" placeholder="例：オンライン、必修、教室番号…" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveSubject()">✦ 登録する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ 登録しました！</div>
+
+<script>
+const DAYS = ['月', '火', '水', '木', '金'];
+const PERIODS = ['１', '２', '３', '４', '５'];
+const TERM_NAMES = ['１ターム', '２ターム', '３ターム', '４ターム'];
+const DAY_COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
+
+// data[term][period][day] = { name, memo }
+const STORAGE_KEY = 'timetable_data';
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return Array.from({length: 4}, () => Array.from({length: 5}, () => Array(5).fill(null)));
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+let data = loadData();
+
+let currentTerm = 0;
+let editTarget = null; // {term, period, day}
+
+function buildTables() {
+  const container = document.getElementById('terms-container');
+  container.innerHTML = '';
+
+  for (let t = 0; t < 4; t++) {
+    const panel = document.createElement('div');
+    panel.className = 'term-panel' + (t === 0 ? ' active' : '');
+    panel.id = `term-${t}`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+
+    const table = document.createElement('table');
+
+    // Header
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const thEmpty = document.createElement('th');
+    headRow.appendChild(thEmpty);
+    DAYS.forEach(d => {
+      const th = document.createElement('th');
+      th.textContent = d;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    // Body
+    const tbody = document.createElement('tbody');
+    for (let p = 0; p < 5; p++) {
+      const tr = document.createElement('tr');
+      const tdPeriod = document.createElement('td');
+      tdPeriod.className = 'period-cell';
+      tdPeriod.textContent = PERIODS[p];
+      tr.appendChild(tdPeriod);
+
+      for (let d = 0; d < 5; d++) {
+        const td = document.createElement('td');
+        td.className = 'subject-cell';
+        td.id = `cell-${t}-${p}-${d}`;
+        td.onclick = () => openModal(t, p, d);
+        renderCell(td, t, p, d);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    panel.appendChild(wrap);
+
+    // Stats
+    const statsBar = document.createElement('div');
+    statsBar.className = 'stats-bar';
+    statsBar.id = `stats-${t}`;
+    panel.appendChild(statsBar);
+
+    container.appendChild(panel);
+    updateStats(t);
+  }
+}
+
+function renderCell(td, t, p, d) {
+  td.innerHTML = '';
+  td.className = 'subject-cell';
+  const subj = data[t][p][d];
+  const inner = document.createElement('div');
+  inner.className = 'cell-inner';
+
+  if (subj) {
+    td.classList.add(`filled-${d}`);
+    const name = document.createElement('div');
+    name.className = 'subject-name';
+    name.textContent = subj.name;
+    inner.appendChild(name);
+    if (subj.memo) {
+      const badge = document.createElement('span');
+      badge.className = `subject-badge badge-${d}`;
+      badge.textContent = subj.memo;
+      inner.appendChild(badge);
+    }
+  } else {
+    inner.classList.add('empty');
+    const icon = document.createElement('span');
+    icon.className = 'add-icon';
+    icon.textContent = '+';
+    inner.appendChild(icon);
+  }
+  td.appendChild(inner);
+}
+
+function updateStats(t) {
+  const bar = document.getElementById(`stats-${t}`);
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  const total = data[t].flat().filter(Boolean).length;
+  const byDay = DAYS.map((day, di) => {
+    const count = data[t].reduce((acc, row) => acc + (row[di] ? 1 : 0), 0);
+    return { day, count, color: DAY_COLORS[di] };
+  });
+
+  // total pill
+  const totalPill = document.createElement('div');
+  totalPill.className = 'stat-pill';
+  totalPill.innerHTML = `<span class="stat-label">合計</span><span class="stat-val">${total} 科目</span>`;
+  bar.appendChild(totalPill);
+
+  byDay.forEach(({day, count, color}) => {
+    if (count === 0) return;
+    const pill = document.createElement('div');
+    pill.className = 'stat-pill';
+    pill.innerHTML = `<span class="stat-dot" style="background:${color}"></span><span class="stat-label">${day}曜</span><span class="stat-val">${count}</span>`;
+    bar.appendChild(pill);
+  });
+}
+
+function openModal(t, p, d) {
+  editTarget = {t, p, d};
+  const subj = data[t][p][d];
+  document.getElementById('modal-label').textContent = `${TERM_NAMES[t]} ／ ${DAYS[d]}曜 ${PERIODS[p]}限`;
+  document.getElementById('modal-title').textContent = `${DAYS[d]}曜日 ${PERIODS[p]}限`;
+  document.getElementById('input-subject').value = subj ? subj.name : '';
+  document.getElementById('input-memo').value = subj ? (subj.memo || '') : '';
+  document.getElementById('btn-delete').style.display = subj ? 'block' : 'none';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('input-subject').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editTarget = null;
+}
+
+function saveSubject() {
+  const {t, p, d} = editTarget;
+  const name = document.getElementById('input-subject').value.trim();
+  if (!name) { document.getElementById('input-subject').focus(); return; }
+  const memo = document.getElementById('input-memo').value.trim();
+  data[t][p][d] = { name, memo };
+  saveData();
+  const td = document.getElementById(`cell-${t}-${p}-${d}`);
+  renderCell(td, t, p, d);
+  updateStats(t);
+  closeModal();
+  showToast('✦ ' + name + ' を登録しました！');
+}
+
+document.getElementById('btn-delete').addEventListener('click', () => {
+  if (!editTarget) return;
+  const {t, p, d} = editTarget;
+  data[t][p][d] = null;
+  saveData();
+  const td = document.getElementById(`cell-${t}-${p}-${d}`);
+  renderCell(td, t, p, d);
+  updateStats(t);
+  closeModal();
+  showToast('🗑 削除しました');
+});
+
+// Enter key to save
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && editTarget) saveSubject();
+});
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+function switchTerm(idx) {
+  currentTerm = idx;
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.term-panel').forEach((panel, i) => {
+    panel.classList.toggle('active', i === idx);
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+buildTables();
+</script>
+</body>
+</html>
